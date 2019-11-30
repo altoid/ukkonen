@@ -1,0 +1,78 @@
+variables to maintain at each step
+* active point   (active node, active edge, active length)
+** active node - the node from which new edge is inserted.
+** active edge - the arc on which we will insert next char.  when this is null char then we insert new edge at active node.  otherwise it indicates the are we follow when inserting new edge.
+** active length - this is where we split the active edge.  when this is 0 then we insert new edge.  if it is e.g. 1 then we split after the 1st character.  alternatively, this is the number of chars before the split.  when this is 0 we do not split.
+* remainder
+
+the active point is where we insert the next character.
+
+we split when we encounter a char we haven't seen before.
+
+active_edge should not be null if active_length > 0 (true?)
+
+empty string is a valid input.  corresponding suffix tree would just look like this:
+
+             $
+(root) ------------> .
+
+every non-leaf node has a suffix link; the algorithm as presented in SO does not set them all though.
+the suffix function takes you to the state that represents the substring you get when you lop of the first
+character of some substring.
+
+e.g.
+
+xy..a...
+
+suppose you are in the state representing the 'a'.  the suffix link takes you to the state representing the 
+'a' in the suffix y..a...
+
+(v,x) is canonical if v is the last explicit state on the path from v to (v,x). NB. (v,empty) is canonical.
+i.e.  v is the parent of a leaf.
+
+* extension rules (gusfield p. 96)
+
+B = S[j..i] is a suffix of S[1..i]
+
+** rule 1
+
+the path from the root labeled B extends to the end of some leaf
+edge.  to update the tree, character s(i + 1) is added to the end of
+the label on that leaf edge.
+
+** rule 2
+
+no path from the end of string B starts with character S(i + 1), but
+at least one labeled path continues from the end of B.
+
+in this case, a new leaf edge starting from the end of B must be
+created and labeled with character S(i + 1).  a new node will also
+have to be created there if B ends inside an edge.  the leaf at the
+end of the new leaf edge is given the number j.
+
+** rule 3
+
+some path from the end of string B starts with character S(i + 1).  in
+this case the string BS(i + 1) is already in the current tree, so we
+do nothing.
+
+* INVARIANTS
+
+the tree is the correct suffix tree up to the current position after
+each step
+
+* TEST CASES
+
+a^nb^n
+
+* MISC
+
+every internal node that we create in some phase will have a suffix
+link from it by the end of the phase.  if we only create one internal
+node in some phase, its suffix link will point to the root.  otherwise
+each new internal node that we create is going to be pointed at by the
+previous one that we create.
+
+gusfield's book doesn't mention active points.
+
+neither ukkonen nor gusfield mention remainders.

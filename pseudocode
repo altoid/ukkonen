@@ -1,0 +1,46 @@
+m = len(text)
+
+construct T1
+
+for i = 1 to m - 1:
+    # begin phase i + 1
+    # we add char i + 1 to Ti
+
+    current_char = text[i + 1]   # 1-based
+
+    nleaves = number of leaves in the tree so far
+
+    add char i + 1 to each of the leaves.  this will not change the number of leaves
+
+    end_of_last_extension = last leaf
+
+    last_internal_node = None
+
+    for j = nleaves + 1 to i + 1:
+
+    	# begin extension j
+
+	suffix = S[j - 1 .. i]
+	alpha = suffix[1:]
+
+	v = end_of_last_extension.parent
+	gamma = label on arc from v to end_of_last_extension.  may be empty.
+
+	if v == root:
+	    traverse alpha
+        else:
+            sv = v.suffix_link
+            traverse gamma from sv
+	apply the extension rules to make sure that alpha + current_char is in the tree.
+	we've taken care of all the leaves already so only rules 2 or 3 apply.
+
+	new_internal_node = node created by split, or None
+        if new_internal_node
+            if last_internal_node
+                last_internal_node.suffix_link = new_internal_node
+            last_internal_node = new_internal_node
+	
+	end_of_last_extension = first node above (or at??) the end of alpha
+
+    if last_internal_node:
+        last_internal_node.suffix_link = root
