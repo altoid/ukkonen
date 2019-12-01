@@ -23,7 +23,9 @@ for i = 1 to m - 1:
 	suffix = S[j - 1 .. i]
 	alpha = suffix[1:]
 
-	v = end_of_last_extension.parent
+	v = traverse suffix.  this will return the first node at or preceeding
+	the end of the suffix.
+
 	gamma = label on arc from v to end_of_last_extension.  may be empty.
 
 	if v == root:

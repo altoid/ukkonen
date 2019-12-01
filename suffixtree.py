@@ -311,7 +311,7 @@ class SuffixTree(object):
                     last_internal_node = new_internal_node
                 j += 1
             i += 1
-        logger.debug("suffix tree complete; %s leaves" % nleaves)
+        logger.debug("suffix tree complete; %s leaves" % len(self.leaves))
 
     def apply_extension_rules(self, cur_extension_suffix, current_char, i, v):
         """
@@ -435,6 +435,16 @@ class TestTree(unittest.TestCase):
 
     def test_build_tree_one_internal_node(self):
         t = SuffixTree("axa")
+        t.build_tree()
+        t.show()
+
+    def test_build_tree_axabx(self):
+        t = SuffixTree("axabx")
+        t.build_tree()
+        t.show()
+
+    def test_build_tree_abcabxabcd(self):
+        t = SuffixTree("abcabxabcd")
         t.build_tree()
         t.show()
 
