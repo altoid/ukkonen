@@ -389,17 +389,7 @@ class TestTree(unittest.TestCase):
         # when build_tree is implemented we can remove this.
         self.text = "axabx"
         self.tree = SuffixTree(self.text)
-
-        self.tree.add_node(self.tree.root, (0, 5))
-        self.n1 = self.tree.root.split_arc((0, 5), 1)
-        self.tree.add_node(self.n1, (3, 4))
-
-        self.tree.add_node(self.tree.root, (1, 5))
-        self.n2 = self.tree.root.split_arc((1, 5), 1)
-        self.tree.add_node(self.n2, (5, 5))
-
-        self.tree.add_node(self.tree.root, (3, 5))
-        self.tree.add_node(self.tree.root, (5, 5))
+        self.tree.build_tree()
 
     def test_add_node(self):
         tree = SuffixTree("abcd")
@@ -437,14 +427,15 @@ class TestTree(unittest.TestCase):
     def test_traversal(self):
         self.assertIsNone(self.tree.traverse(self.tree.root, 'cccc'))
 
-        self.assertEqual(self.n1, self.tree.traverse(self.tree.root, 'a'))
-        self.assertEqual(self.n1, self.tree.traverse(self.tree.root, 'axa'))
+        internal_node = self.tree.traverse(self.tree.root, 'a')
+        self.assertNotEqual(self.tree.root, internal_node)
+        self.assertEqual(internal_node, self.tree.traverse(self.tree.root, 'axa'))
 
         self.assertEqual(self.tree.root, self.tree.traverse(self.tree.root, 'b'))
 
         self.assertEqual(self.tree.leaves[0], self.tree.traverse(self.tree.root, 'axabx$'))
 
-        self.assertEqual(self.n1, self.tree.traverse(self.n1, 'b'))
+        self.assertEqual(internal_node, self.tree.traverse(internal_node, 'b'))
 
         self.assertEqual(self.tree.leaves[5], self.tree.traverse(self.tree.root, '$'))
 
