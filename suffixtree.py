@@ -74,7 +74,7 @@ class Node(object):
         else:
             print "%s%s" % ('    ' * level, id(self))
         for k in self.children.keys():
-            print '%s%s - %s' % ('    ' * (level + 1), k, self.tree.text[k[0]:k[1] + 1])
+            print '%s%s - %s' % ('    ' * (level + 1), k, self.tree.get_arc_label(k))
             self.children[k].show(level=level + 2)
 
     def get_key(self, c):
@@ -164,6 +164,16 @@ class Node(object):
 
         return self
 
+    def get_arc_from_parent(self):
+        # TODO:  devise a better way to do this.  e.g. change traverse to return both the node and the arc
+        # TODO:  from the parent
+        if self.parent is None:
+            return None
+
+        for i in self.parent.children.items():
+            if i[1] == self:
+                return i[0]
+
 
 class SuffixTree(object):
     def __init__(self, text):
@@ -180,6 +190,9 @@ class SuffixTree(object):
                 child.parent = node
             else:
                 self.append_helper(child)
+
+    def get_arc_label(self, arc):
+        return self.text[arc[0]:arc[1] + 1]
 
     def show(self):
         print self.text
@@ -255,42 +268,85 @@ class SuffixTree(object):
         logger.debug("phase 1 - constructing T1")
         self.add_node(self.root, (0, 0))
 
-        nleaves = 1
         m = len(self.text)
         i = 1
+        nleaves = 1
         while i < m:
             current_char = self.text[i]
 
+            nleaves = len(self.leaves)
             logger.debug("phase i + 1 = %s" % (i + 1))
             logger.debug("adding %s to each of the %s leaves" % (current_char, nleaves))
             self.append_to_leaves()
 
-            end_of_last_extension = self.leaves[-1]
-
+            # after we extend all the leaves, start traversing from the root.
+            current_node = self.root
             last_internal_node = None
 
             j = nleaves + 1
             while j < i + 2:
                 logger.debug("extension j = %s" % j)
 
-                suffix = self.text[j - 2:i]
-                alpha = suffix[1:]
-                v = end_of_last_extension.parent
+                prev_extension_suffix = self.text[j - 2:i]
+                cur_extension_suffix = prev_extension_suffix[1:]
 
-                logger.debug("suffix = %s, alpha = %s" % (suffix, alpha))
+                logger.debug("prev suffix = %s, current suffix = %s" % (prev_extension_suffix, cur_extension_suffix))
 
+                v = self.traverse(current_node, prev_extension_suffix)
                 if v == self.root:
-                    if not alpha:
-                        self.add_node(self.root, (i, i))
-                    else:
-                        raise Exception("alpha:  unimplemented")
+                    # need to ensure that cur_extension_suffix + current_char is in the tree.  figure out which
+                    # extension rule applies.
+                    new_internal_node = self.apply_extension_rules(cur_extension_suffix, current_char, i, v)
                 else:
-                    raise Exception("v != root:  unimplemented")
+                    sv = v.suffix_link
+                    if sv == self.root:
+                        new_internal_node = self.apply_extension_rules(cur_extension_suffix, current_char, i, sv)
+                    else:
+                        raise Exception("sv != self.root:  unimplemented")
 
+                if new_internal_node:
+                    if last_internal_node:
+                        last_internal_node.suffix_link = new_internal_node
+                    new_internal_node.suffix_link = self.root
+                    last_internal_node = new_internal_node
                 j += 1
             i += 1
-            nleaves += 1
         logger.debug("suffix tree complete; %s leaves" % nleaves)
+
+    def apply_extension_rules(self, cur_extension_suffix, current_char, i, v):
+        """
+
+        :param cur_extension_suffix:
+        :param current_char:
+        :param i:
+        :param v: node from which w
+        :return: if a new internal node is created, return it.  otherwise return None
+        """
+        vv = self.traverse(v, cur_extension_suffix)
+        if vv != self.root:
+            raise Exception("vv != root - unimplemented")
+        if not cur_extension_suffix:
+            arc = vv.get_key(current_char)
+            if arc is not None:
+                # cur_extension_suffix + current_char is already here:  rule 3
+                pass
+            else:
+                # have to add new edge
+                self.add_node(vv, (i, i))
+        else:
+            # find the end of cur_extension_suffix.
+            arc = vv.get_key(cur_extension_suffix[0])
+            label = self.get_arc_label(arc)
+            # since vv is root, we know that cur_extension_suffix does not end at another node.  therefore
+            # the label is at least 1 char longer than cur_extension_suffix.
+            if label.startswith(cur_extension_suffix + current_char):
+                # cur_extension_suffix + current_char is already here:  rule 3
+                pass
+            else:
+                # have to split
+                new_internal_node = vv.split_arc(arc, len(cur_extension_suffix))
+                self.add_node(new_internal_node, (i, i))
+                return new_internal_node
 
 
 class TestNode(unittest.TestCase):
@@ -374,6 +430,11 @@ class TestTree(unittest.TestCase):
 
     def test_build_tree_no_internal_nodes(self):
         t = SuffixTree("abcd")
+        t.build_tree()
+        t.show()
+
+    def test_build_tree_one_internal_node(self):
+        t = SuffixTree("axa")
         t.build_tree()
         t.show()
 
