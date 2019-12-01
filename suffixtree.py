@@ -260,6 +260,24 @@ class SuffixTree(object):
 
         return node.traverse(s)
 
+    def partial_path(self, origin, terminus):
+        """
+        return the concatenation of the arc labels from origin to terminus.
+        :param origin:
+        :param terminus:
+        :return: returns empty string if origin == terminus.  raises exception if terminus cannot be reached from
+        origin
+        """
+        result = ""
+        p = terminus
+        while p:
+            if p == origin:
+                return result
+            a = p.get_arc_from_parent()
+            result = self.get_arc_label(a) + result
+            p = p.parent
+        raise Exception("partial_path - origin does not precede terminus")
+
     def build_tree(self):
         # add the first character to construct T1.
 
@@ -302,7 +320,10 @@ class SuffixTree(object):
                     if sv == self.root:
                         new_internal_node = self.apply_extension_rules(cur_extension_suffix, current_char, i, sv)
                     else:
-                        raise Exception("sv != self.root:  unimplemented")
+                        partial_path = self.partial_path(current_node, v)
+                        assert(prev_extension_suffix.startswith(partial_path))
+                        gamma = prev_extension_suffix[len(partial_path):]
+                        new_internal_node = self.apply_extension_rules(gamma, current_char, i, sv)
 
                 if new_internal_node:
                     if last_internal_node:
@@ -323,8 +344,12 @@ class SuffixTree(object):
         :return: if a new internal node is created, return it.  otherwise return None
         """
         vv = self.traverse(v, cur_extension_suffix)
-        if vv != self.root:
-            raise Exception("vv != root - unimplemented")
+        if vv != v:
+            # find the concatenation of the labels between v and vv
+            partial_path = self.partial_path(v, vv)
+            assert(cur_extension_suffix.startswith(partial_path))
+            cur_extension_suffix = cur_extension_suffix[len(partial_path):]
+
         if not cur_extension_suffix:
             arc = vv.get_key(current_char)
             if arc is not None:
