@@ -473,6 +473,11 @@ class TestTree(unittest.TestCase):
         t.build_tree()
         t.show()
 
+    def test_build_tree_mississippi(self):
+        t = SuffixTree("mississippi")
+        t.build_tree()
+        t.show()
+
     def test_empty_tree(self):
         # make sure that we can build, traverse, show, and search a suffix tree constructed with the empty string.
 
