@@ -54,19 +54,6 @@ class Node(object):
                 return True
         return False
 
-    def match_helper(self, p):
-        if len(p) == 0:
-            return True
-
-        # go through all the children to see if any of them match
-        for k in self.children.keys():
-            x = p[:k[1]]
-            y = self.tree.text[k[0]:k[0] + k[1]]
-            if x == y:
-                nextnode = self.children[k]
-                return nextnode.match_helper(p[k[1]:])
-        return False
-
     def show(self, **kwargs):
         level = kwargs.get('level', 0)
         if self.suffix_link:
@@ -206,35 +193,28 @@ class SuffixTree(object):
     def text(self):
         return self.__text
 
-    def matches(self, p):
-        return self.root.match_helper(p)
-
-    def text_fragment(self, arc):
-        return self.text[arc[0]:(arc[1] + 1)]
-
     def is_substring(self, s):
-        # current_node = self.root
-        # i = 0
-        # t = current_node.get_key(s[i])
-        # while t:
-        #     min_l = min(t[1], len(s[i:]))
-        #     if self.text[t[0]:t[0] + min_l] != s[i:i + min_l]:
-        #         return False
-        #
-        #     i += min_l
-        #     if i == len(s):
-        #         return True
-        #
-        #     current_node = current_node.children[t]
-        #     t = current_node.get_key(s[i])
-        #
+        current_node = self.root
+        i = 0
+        t = current_node.get_key(s[i])
+        while t:
+            min_l = min(t[1] - t[0] + 1, len(s[i:]))
+            label = self.get_arc_label(t)
+
+            if label[:min_l] != s[i:i + min_l]:
+                return False
+
+            i += min_l
+            if i == len(s):
+                return True
+
+            current_node = current_node.children[t]
+            t = current_node.get_key(s[i])
+
         return False
 
     def is_suffix(self, s):
         return self.is_substring(s + '$')
-
-    def count_suffixes(self):
-        return self.root.count_suffixes()
 
     def dump_suffix_helper(self, partial_string, node):
         if node.is_leaf():
@@ -242,7 +222,7 @@ class SuffixTree(object):
             return
 
         for k, v in node.children.items():
-            for x in self.dump_suffix_helper(partial_string + self.text_fragment(k), v):
+            for x in self.dump_suffix_helper(partial_string + self.get_arc_label(k), v):
                 yield x
 
     def suffixes(self):
@@ -288,7 +268,6 @@ class SuffixTree(object):
 
         m = len(self.text)
         i = 1
-        nleaves = 1
         while i < m:
             current_char = self.text[i]
 
@@ -463,6 +442,65 @@ class TestTree(unittest.TestCase):
         t = SuffixTree("abcabxabcd")
         t.build_tree()
         t.show()
+
+        self.assertTrue(t.is_substring('abcabxabcd'))
+        self.assertTrue(t.is_substring('abcabxabc'))
+        self.assertTrue(t.is_substring('abcabxab'))
+        self.assertTrue(t.is_substring('abcabxa'))
+        self.assertTrue(t.is_substring('abcabx'))
+        self.assertTrue(t.is_substring('abcab'))
+        self.assertTrue(t.is_substring('abca'))
+        self.assertTrue(t.is_substring('abc'))
+        self.assertTrue(t.is_substring('ab'))
+        self.assertTrue(t.is_substring('a'))
+
+        self.assertTrue(t.is_substring('bcabxabcd'))
+        self.assertTrue(t.is_substring('cabxabcd'))
+        self.assertTrue(t.is_substring('abxabcd'))
+        self.assertTrue(t.is_substring('bxabcd'))
+        self.assertTrue(t.is_substring('xabcd'))
+        self.assertTrue(t.is_substring('abcd'))
+        self.assertTrue(t.is_substring('bcd'))
+        self.assertTrue(t.is_substring('cd'))
+        self.assertTrue(t.is_substring('d'))
+
+        self.assertTrue(t.is_substring('b'))
+        self.assertTrue(t.is_substring('c'))
+        self.assertTrue(t.is_substring('x'))
+
+        self.assertFalse(t.is_substring('xba'))
+        self.assertFalse(t.is_substring('poop'))
+        self.assertFalse(t.is_substring('aa'))
+        self.assertFalse(t.is_substring('bcx'))
+        self.assertFalse(t.is_substring('abcabxabce'))
+        self.assertFalse(t.is_substring('abdc'))
+
+        ######
+
+        self.assertTrue(t.is_suffix('abcabxabcd'))
+        self.assertFalse(t.is_suffix('abcabxabc'))
+        self.assertFalse(t.is_suffix('abcabxab'))
+        self.assertFalse(t.is_suffix('abcabxa'))
+        self.assertFalse(t.is_suffix('abcabx'))
+        self.assertFalse(t.is_suffix('abcab'))
+        self.assertFalse(t.is_suffix('abca'))
+        self.assertFalse(t.is_suffix('abc'))
+        self.assertFalse(t.is_suffix('ab'))
+        self.assertFalse(t.is_suffix('a'))
+
+        self.assertTrue(t.is_suffix('bcabxabcd'))
+        self.assertTrue(t.is_suffix('cabxabcd'))
+        self.assertTrue(t.is_suffix('abxabcd'))
+        self.assertTrue(t.is_suffix('bxabcd'))
+        self.assertTrue(t.is_suffix('xabcd'))
+        self.assertTrue(t.is_suffix('abcd'))
+        self.assertTrue(t.is_suffix('bcd'))
+        self.assertTrue(t.is_suffix('cd'))
+        self.assertTrue(t.is_suffix('d'))
+
+        self.assertFalse(t.is_suffix('b'))
+        self.assertFalse(t.is_suffix('c'))
+        self.assertFalse(t.is_suffix('x'))
 
     def test_build_tree_mississippi(self):
         t = SuffixTree("mississippi")
