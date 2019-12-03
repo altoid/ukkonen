@@ -1,6 +1,9 @@
+#!/usr/bin/env python
+
 import logging
 import sys
 import unittest
+import fileinput
 
 
 def get_logger():
@@ -12,7 +15,7 @@ def get_logger():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-    level = logging.DEBUG
+    level = logging.INFO
     logger.setLevel(level)
     ch.setLevel(level)
 
@@ -293,22 +296,24 @@ class SuffixTree(object):
                 if v == self.root:
                     # need to ensure that cur_extension_suffix + current_char is in the tree.  figure out which
                     # extension rule applies.
-                    new_internal_node = self.apply_extension_rules(cur_extension_suffix, current_char, i, v)
+                    skip_remaining_extensions, new_internal_node = self.apply_extension_rules(cur_extension_suffix, current_char, i, v)
                 else:
                     sv = v.suffix_link
                     if sv == self.root:
-                        new_internal_node = self.apply_extension_rules(cur_extension_suffix, current_char, i, sv)
+                        skip_remaining_extensions, new_internal_node = self.apply_extension_rules(cur_extension_suffix, current_char, i, sv)
                     else:
                         partial_path = self.partial_path(current_node, v)
                         assert(prev_extension_suffix.startswith(partial_path))
                         gamma = prev_extension_suffix[len(partial_path):]
-                        new_internal_node = self.apply_extension_rules(gamma, current_char, i, sv)
+                        skip_remaining_extensions, new_internal_node = self.apply_extension_rules(gamma, current_char, i, sv)
 
                 if new_internal_node:
                     if last_internal_node:
                         last_internal_node.suffix_link = new_internal_node
                     new_internal_node.suffix_link = self.root
                     last_internal_node = new_internal_node
+                if skip_remaining_extensions:
+                    break
                 j += 1
             i += 1
         logger.debug("suffix tree complete; %s leaves" % len(self.leaves))
@@ -320,7 +325,9 @@ class SuffixTree(object):
         :param current_char:
         :param i:
         :param v: node from which w
-        :return: if a new internal node is created, return it.  otherwise return None
+        :return: tuple (boolean, Node).  the boolean indicates whether rule 3 was applied.  if it was, than we can
+        skip the remaining extensions in the current phase.  the Node in the pair is the internal node, if any, that
+        was created by applying the extension rules.  otherwise None is returned as the node value.
         """
         vv = self.traverse(v, cur_extension_suffix)
         if vv != v:
@@ -333,24 +340,33 @@ class SuffixTree(object):
             arc = vv.get_key(current_char)
             if arc is not None:
                 # cur_extension_suffix + current_char is already here:  rule 3
-                pass
-            else:
-                # have to add new edge
-                self.add_node(vv, (i, i))
-        else:
-            # find the end of cur_extension_suffix.
-            arc = vv.get_key(cur_extension_suffix[0])
-            label = self.get_arc_label(arc)
-            # since vv is root, we know that cur_extension_suffix does not end at another node.  therefore
-            # the label is at least 1 char longer than cur_extension_suffix.
-            if label.startswith(cur_extension_suffix + current_char):
-                # cur_extension_suffix + current_char is already here:  rule 3
-                pass
-            else:
-                # have to split
-                new_internal_node = vv.split_arc(arc, len(cur_extension_suffix))
-                self.add_node(new_internal_node, (i, i))
-                return new_internal_node
+                return True, None
+
+            # have to add new leaf
+            self.add_node(vv, (i, i))
+            return False, None
+
+        # find the end of cur_extension_suffix.
+        arc = vv.get_key(cur_extension_suffix[0])
+        label = self.get_arc_label(arc)
+        # since vv is root, we know that cur_extension_suffix does not end at another node.  therefore
+        # the label is at least 1 char longer than cur_extension_suffix.
+        if label.startswith(cur_extension_suffix + current_char):
+            # cur_extension_suffix + current_char is already here:  rule 3
+            return True, None
+
+        # have to split
+        new_internal_node = vv.split_arc(arc, len(cur_extension_suffix))
+        self.add_node(new_internal_node, (i, i))
+        return False, new_internal_node
+
+
+if __name__ == '__main__':
+    fi = fileinput.FileInput()
+    line = fi.readline().strip()
+    t = SuffixTree(line)
+    t.build_tree()
+    t.show()
 
 
 class TestNode(unittest.TestCase):
@@ -514,6 +530,13 @@ class TestTree(unittest.TestCase):
 
     def test_build_tree_aaabbb(self):
         t = SuffixTree("aaabbb")
+        t.build_tree()
+        t.show()
+
+    def test_build_tree_anbn(self):
+        n = 23
+        text = 'a' * n + 'b' * n
+        t = SuffixTree(text)
         t.build_tree()
         t.show()
 
