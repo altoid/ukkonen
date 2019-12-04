@@ -15,7 +15,7 @@ def get_logger():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-    level = logging.INFO
+    level = logging.DEBUG
     logger.setLevel(level)
     ch.setLevel(level)
 
@@ -23,6 +23,8 @@ def get_logger():
 
 
 logger = get_logger()
+
+MARKER = 0xfeedface
 
 
 class Node(object):
@@ -40,7 +42,8 @@ class Node(object):
         # this must specify at least one character, and the indices cannot run past the end of the text.
 
         assert(arc not in self.children)
-        assert(0 <= arc[0] <= arc[1] < len(self.tree.text))
+        assert(0 <= arc[0] < len(self.tree.text))
+        assert(arc[0] <= arc[1] < len(self.tree.text) or arc[1] == MARKER)
 
         n = Node(self.tree)
         self.children[arc] = n
@@ -97,7 +100,10 @@ class Node(object):
         :return: new internal node created by the split operation.
         """
 
-        assert(0 < n < arc[1] - arc[0] + 1)  # this forces arc label to be at least 2 chars.
+        # this forces arc label to be at least 2 chars.
+        assert(0 < n)
+        assert(arc[1] == MARKER or n < arc[1] - arc[0] + 1)
+
         assert(arc in self.children)
 
         child = self.children[arc]
@@ -137,7 +143,11 @@ class Node(object):
         if not arc:
             return None
 
-        arc_len = arc[1] - arc[0] + 1
+        if arc[1] == MARKER:
+            arc_len = len(self.tree.text) - arc[0]
+        else:
+            arc_len = arc[1] - arc[0] + 1
+
         chars_to_match = min(arc_len, len(s))
         if s[:chars_to_match] != text[arc[0]:(arc[0] + chars_to_match)]:
             return None
@@ -171,26 +181,14 @@ class SuffixTree(object):
         self.root = Node(self)
         self.leaves = []
 
-    def append_helper(self, node):
-        for t in node.children.keys():
-            child = node.children[t]
-            if len(child.children) == 0:
-                del node.children[t]
-                node.children[(t[0], t[1] + 1)] = child
-                child.parent = node
-            else:
-                self.append_helper(child)
-
     def get_arc_label(self, arc):
+        if arc[1] == MARKER:
+            return self.text[arc[0]:]
         return self.text[arc[0]:arc[1] + 1]
 
     def show(self):
         print self.text
         self.root.show()
-
-    def append_to_leaves(self):
-        # this will just increment the lengths for arcs pointing to leaf nodes
-        self.append_helper(self.root)
 
     @property
     def text(self):
@@ -261,13 +259,27 @@ class SuffixTree(object):
             p = p.parent
         raise Exception("partial_path - origin does not precede terminus")
 
+    def fix_leaves(self):
+        """
+        after the tree is built, change the arcs into each leaf so that arc[1] is not MARKER but the index of
+        the last char in the text.
+        :return:
+        """
+        for l in self.leaves:
+            p = l.parent
+            arc = l.get_arc_from_parent()
+            assert arc is not None
+            new_arc = (arc[0], len(self.text) - 1)
+            del p.children[arc]
+            p.children[new_arc] = l
+
     def build_tree(self):
         # add the first character to construct T1.
 
         # phase and extension numbers are 1-based.
 
         logger.debug("phase 1 - constructing T1")
-        self.add_node(self.root, (0, 0))
+        self.add_node(self.root, (0, MARKER))
 
         m = len(self.text)
         i = 1
@@ -275,9 +287,6 @@ class SuffixTree(object):
             current_char = self.text[i]
 
             nleaves = len(self.leaves)
-            logger.debug("phase i + 1 = %s" % (i + 1))
-            logger.debug("adding %s to each of the %s leaves" % (current_char, nleaves))
-            self.append_to_leaves()
 
             # after we extend all the leaves, start traversing from the root.
             current_node = self.root
@@ -316,6 +325,8 @@ class SuffixTree(object):
                     break
                 j += 1
             i += 1
+
+        self.fix_leaves()
         logger.debug("suffix tree complete; %s leaves" % len(self.leaves))
 
     def apply_extension_rules(self, cur_extension_suffix, current_char, i, v):
@@ -343,7 +354,7 @@ class SuffixTree(object):
                 return True, None
 
             # have to add new leaf
-            self.add_node(vv, (i, i))
+            self.add_node(vv, (i, MARKER))
             return False, None
 
         # find the end of cur_extension_suffix.
@@ -357,7 +368,7 @@ class SuffixTree(object):
 
         # have to split
         new_internal_node = vv.split_arc(arc, len(cur_extension_suffix))
-        self.add_node(new_internal_node, (i, i))
+        self.add_node(new_internal_node, (i, MARKER))
         return False, new_internal_node
 
 
