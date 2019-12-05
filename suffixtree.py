@@ -222,12 +222,16 @@ class SuffixTree(object):
             yield partial_string
             return
 
-        for k, v in node.children.items():
-            for x in self.dump_suffix_helper(partial_string + self.get_arc_label(k), v):
+        # this sorts the arcs by first character on the label
+        keys = sorted(node.children.keys(), key=lambda x: self.text[x[0]])
+
+        for k in keys:
+            for x in self.dump_suffix_helper(partial_string + self.get_arc_label(k), node.children[k]):
                 yield x
 
     def suffixes(self):
-        return self.dump_suffix_helper('', self.root)
+        for s in self.dump_suffix_helper('', self.root):
+            yield s
 
     def add_node(self, node, arc):
         assert(node.tree == self)
@@ -534,6 +538,9 @@ class TestTree(unittest.TestCase):
         t.build_tree()
         t.show()
 
+        for s in t.suffixes():
+            print s
+
     def test_build_tree_commodore(self):
         t = SuffixTree("commodore")
         t.build_tree()
@@ -550,6 +557,9 @@ class TestTree(unittest.TestCase):
         t = SuffixTree(text)
         t.build_tree()
         t.show()
+
+        for s in t.suffixes():
+            print s
 
     def test_empty_tree(self):
         # make sure that we can build, traverse, show, and search a suffix tree constructed with the empty string.
