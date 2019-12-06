@@ -143,10 +143,7 @@ class Node(object):
         if not arc:
             return None
 
-        if arc[1] == MARKER:
-            arc_len = len(self.tree.text) - arc[0]
-        else:
-            arc_len = arc[1] - arc[0] + 1
+        arc_len = self.tree.arc_length(arc)
 
         chars_to_match = min(arc_len, len(s))
         if s[:chars_to_match] != text[arc[0]:(arc[0] + chars_to_match)]:
@@ -375,6 +372,60 @@ class SuffixTree(object):
         self.add_node(new_internal_node, (i, MARKER))
         return False, new_internal_node
 
+    def arc_length(self, arc):
+        if arc[1] == MARKER:
+            return len(self.text) - arc[0]
+        return arc[1] - arc[0] + 1
+
+    def prefix_expansion_length(self, node, arc, acc):
+        """
+        for a node and an arc out of that node, give me the length of the prefix expansion through that arc.
+
+        i.e. in the suffix tree for 'mississippi',
+
+        prefix_expansion_length(root, (8, 8))
+
+        is 8
+
+        because the prefix expansion along that path is
+
+        p
+        pi
+        pp
+        ppi
+
+        ignoring any $ markers.
+
+        :param node:
+        :param arc:
+        :return:
+        """
+
+        result = 0
+
+        next_node = node.children[arc]
+        if next_node.is_leaf():
+            l = self.arc_length(arc) - 1   # lop off the $
+            result = l * (l + 1) / 2 + acc * l
+        else:
+            l = self.arc_length(arc)
+            acc += l
+            result = acc
+            for c in next_node.children.keys():
+                result += self.prefix_expansion_length(next_node, c, acc)
+        return result
+
+    def substring_expansion_length(self):
+        """
+        return the sum of the lengths of every unique substring of the text.
+        :return:
+        """
+
+        total = 0
+        for c in self.root.children.keys():
+            total += self.prefix_expansion_length(self.root, c, 0)
+        return total
+
 
 if __name__ == '__main__':
     fi = fileinput.FileInput()
@@ -568,3 +619,8 @@ class TestTree(unittest.TestCase):
         empty.show()
         all_suffixes = [x for x in empty.suffixes()]
         self.assertEqual(1, len(all_suffixes))
+
+    def test_prefix_expansion_length(self):
+        t = SuffixTree("mississippi")
+        t.build_tree()
+        self.assertEqual(8, t.prefix_expansion_length(t.root, (8, 8), 0))
