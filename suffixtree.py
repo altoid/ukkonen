@@ -636,3 +636,8 @@ class TestTree(unittest.TestCase):
         self.assertEqual(8, t.prefix_expansion_length(t.root, (8, 8), 0))
         self.assertEqual(82, t.prefix_expansion_length(t.root, (1, 1), 0))
         self.assertEqual(107, t.prefix_expansion_length(t.root, (2, 2), 0))
+
+    def test_substring_expansion_length_mississippi(self):
+        t = SuffixTree("mississippi")
+        t.build_tree()
+        self.assertEqual(263, t.substring_expansion_length())
