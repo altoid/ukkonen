@@ -404,15 +404,14 @@ class SuffixTree(object):
         result = 0
 
         next_node = node.children[arc]
+        l = self.arc_length(arc)
         if next_node.is_leaf():
-            l = self.arc_length(arc) - 1   # lop off the $
-            result = l * (l + 1) / 2 + acc * l
-        else:
-            l = self.arc_length(arc)
-            result = l * (l + 1) / 2 + acc * l
-            acc += l
-            for c in next_node.children.keys():
-                result += self.prefix_expansion_length(next_node, c, acc)
+            l -= 1   # lop off the $
+
+        result = l * (l + 1) / 2 + acc * l
+        acc += l
+        for c in next_node.children.keys():
+            result += self.prefix_expansion_length(next_node, c, acc)
         return result
 
     def substring_expansion_length(self):
