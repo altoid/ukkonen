@@ -633,6 +633,7 @@ class TestTree(unittest.TestCase):
         t.build_tree()
 
         self.assertEqual(66, t.prefix_expansion_length(t.root, (0, 11), 0))
+        self.assertEqual(0, t.prefix_expansion_length(t.root, (11, 11), 0))
         self.assertEqual(8, t.prefix_expansion_length(t.root, (8, 8), 0))
         self.assertEqual(82, t.prefix_expansion_length(t.root, (1, 1), 0))
         self.assertEqual(107, t.prefix_expansion_length(t.root, (2, 2), 0))
