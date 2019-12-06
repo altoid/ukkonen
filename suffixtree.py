@@ -377,54 +377,6 @@ class SuffixTree(object):
             return len(self.text) - arc[0]
         return arc[1] - arc[0] + 1
 
-    def prefix_expansion_length(self, node, arc, acc):
-        """
-        for a node and an arc out of that node, give me the length of the prefix expansion through that arc.
-
-        i.e. in the suffix tree for 'mississippi',
-
-        prefix_expansion_length(root, (8, 8))
-
-        is 8
-
-        because the prefix expansion along that path is
-
-        p
-        pi
-        pp
-        ppi
-
-        ignoring any $ markers.
-
-        :param node:
-        :param arc:
-        :return:
-        """
-
-        result = 0
-
-        next_node = node.children[arc]
-        l = self.arc_length(arc)
-        if next_node.is_leaf():
-            l -= 1   # lop off the $
-
-        result = l * (l + 1) / 2 + acc * l
-        acc += l
-        for c in next_node.children.keys():
-            result += self.prefix_expansion_length(next_node, c, acc)
-        return result
-
-    def substring_expansion_length(self):
-        """
-        return the sum of the lengths of every unique substring of the text.
-        :return:
-        """
-
-        total = 0
-        for c in self.root.children.keys():
-            total += self.prefix_expansion_length(self.root, c, 0)
-        return total
-
 
 if __name__ == '__main__':
     fi = fileinput.FileInput()
@@ -618,26 +570,3 @@ class TestTree(unittest.TestCase):
         empty.show()
         all_suffixes = [x for x in empty.suffixes()]
         self.assertEqual(1, len(all_suffixes))
-
-    def test_prefix_expansion_length_commodore(self):
-        t = SuffixTree("commodore")
-        t.build_tree()
-        self.assertEqual(10, t.prefix_expansion_length(t.root, (5, 9), 0))
-        self.assertEqual(45, t.prefix_expansion_length(t.root, (0, 9), 0))
-        self.assertEqual(55, t.prefix_expansion_length(t.root, (1, 1), 0))
-        self.assertEqual(48, t.prefix_expansion_length(t.root, (2, 2), 0))
-
-    def test_prefix_expansion_length_mississippi(self):
-        t = SuffixTree("mississippi")
-        t.build_tree()
-
-        self.assertEqual(66, t.prefix_expansion_length(t.root, (0, 11), 0))
-        self.assertEqual(0, t.prefix_expansion_length(t.root, (11, 11), 0))
-        self.assertEqual(8, t.prefix_expansion_length(t.root, (8, 8), 0))
-        self.assertEqual(82, t.prefix_expansion_length(t.root, (1, 1), 0))
-        self.assertEqual(107, t.prefix_expansion_length(t.root, (2, 2), 0))
-
-    def test_substring_expansion_length_mississippi(self):
-        t = SuffixTree("mississippi")
-        t.build_tree()
-        self.assertEqual(263, t.substring_expansion_length())
