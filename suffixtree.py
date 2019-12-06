@@ -409,8 +409,8 @@ class SuffixTree(object):
             result = l * (l + 1) / 2 + acc * l
         else:
             l = self.arc_length(arc)
+            result = l * (l + 1) / 2 + acc * l
             acc += l
-            result = acc
             for c in next_node.children.keys():
                 result += self.prefix_expansion_length(next_node, c, acc)
         return result
@@ -620,7 +620,19 @@ class TestTree(unittest.TestCase):
         all_suffixes = [x for x in empty.suffixes()]
         self.assertEqual(1, len(all_suffixes))
 
-    def test_prefix_expansion_length(self):
+    def test_prefix_expansion_length_commodore(self):
+        t = SuffixTree("commodore")
+        t.build_tree()
+        self.assertEqual(10, t.prefix_expansion_length(t.root, (5, 9), 0))
+        self.assertEqual(45, t.prefix_expansion_length(t.root, (0, 9), 0))
+        self.assertEqual(55, t.prefix_expansion_length(t.root, (1, 1), 0))
+        self.assertEqual(48, t.prefix_expansion_length(t.root, (2, 2), 0))
+
+    def test_prefix_expansion_length_mississippi(self):
         t = SuffixTree("mississippi")
         t.build_tree()
+
+        self.assertEqual(66, t.prefix_expansion_length(t.root, (0, 11), 0))
         self.assertEqual(8, t.prefix_expansion_length(t.root, (8, 8), 0))
+        self.assertEqual(82, t.prefix_expansion_length(t.root, (1, 1), 0))
+        self.assertEqual(107, t.prefix_expansion_length(t.root, (2, 2), 0))
