@@ -217,7 +217,7 @@ class SuffixTree(object):
     def is_suffix(self, s):
         return self.is_substring(s + '$')
 
-    def dump_suffix_helper(self, partial_string, node):
+    def suffix_helper(self, partial_string, node):
         if node.is_leaf():
             yield partial_string
             return
@@ -226,11 +226,11 @@ class SuffixTree(object):
         keys = sorted(node.children.keys(), key=lambda x: self.text[x[0]])
 
         for k in keys:
-            for x in self.dump_suffix_helper(partial_string + self.get_arc_label(k), node.children[k]):
+            for x in self.suffix_helper(partial_string + self.get_arc_label(k), node.children[k]):
                 yield x
 
     def suffixes(self):
-        for s in self.dump_suffix_helper('', self.root):
+        for s in self.suffix_helper('', self.root):
             yield s
 
     def add_node(self, node, arc):
@@ -566,4 +566,5 @@ class TestTree(unittest.TestCase):
 
         empty = SuffixTree("")
         empty.show()
-        pass
+        all_suffixes = [x for x in empty.suffixes()]
+        self.assertEqual(1, len(all_suffixes))
